@@ -13,7 +13,11 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(helmet());
 app.use(cors({ 
-  origin: true, // Allow all origins temporarily for testing
+  origin: [
+    'https://invoice-kqw52vp9e-aitik-officials-projects.vercel.app',
+    'https://invoice-gen-aitik.vercel.app', 
+    'http://localhost:3000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
