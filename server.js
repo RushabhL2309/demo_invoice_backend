@@ -14,6 +14,7 @@ const allowedOrigins = [
   'https://invoice-kqw52vp9e-aitik-officials-projects.vercel.app', // your actual Vercel domain
   'https://invoice-gen-aitik.vercel.app', // any other Vercel preview/custom domains
   'https://invoicegen-coral.vercel.app', // additional Vercel domain
+  'https://invoice-gen-755r.vercel.app', // new Vercel deployment
   'http://localhost:3000' // for local development
 ];
 
