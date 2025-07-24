@@ -15,9 +15,12 @@ const router = express.Router();
 // GET /api/invoices - List all invoices
 router.get('/invoices', async (req, res) => {
   try {
+    console.log('Fetching invoices from database...');
     const invoices = await Invoice.find().sort({ createdAt: -1 });
+    console.log(`Found ${invoices.length} invoices`);
     res.json(invoices);
   } catch (err) {
+    console.error('Error fetching invoices:', err);
     res.status(500).json({ error: err.message });
   }
 });
