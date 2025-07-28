@@ -9,6 +9,7 @@ const Counter = require('./invoiceCounter');
 // --- Mongoose Invoice Schema (define if not present) ---
 const invoiceSchema = new mongoose.Schema({
   invoiceId: { type: String, unique: true, required: true },
+  invoiceNo: { type: String }, // Add invoiceNo at top level
   data: { type: Object, required: true }, // All invoice fields
   createdAt: { type: Date, default: Date.now },
   excelFilePath: { type: String }, // Path to saved Excel file
