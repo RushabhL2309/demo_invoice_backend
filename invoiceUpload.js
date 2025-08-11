@@ -4,15 +4,13 @@ const multer = require('multer');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-const Counter = require('./invoiceCounter');
+
 
 // --- Mongoose Invoice Schema (define if not present) ---
 const invoiceSchema = new mongoose.Schema({
-  invoiceId: { type: String, unique: true, required: true },
-  invoiceNo: { type: String }, // Add invoiceNo at top level
-  data: { type: Object, required: true }, // All invoice fields
-  createdAt: { type: Date, default: Date.now },
-  excelFilePath: { type: String }, // Path to saved Excel file
+  // REMOVE invoiceNo field completely - only store Excel data
+  data: { type: mongoose.Schema.Types.Mixed, required: true },
+  createdAt: { type: Date, default: Date.now }
 });
 const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);
 
@@ -41,30 +39,55 @@ router.post('/invoice-upload', upload.single('excel'), async (req, res) => {
     const failedInvoices = [];
     for (const [idx, data] of invoiceData.entries()) {
       try {
-        // Increment the counter for each invoice
-        const counter = await Counter.findByIdAndUpdate(
-          { _id: 'invoiceId' },
-          { $inc: { seq: 1 } },
-          { new: true, upsert: true }
-        );
-        const invoiceId = `INV${String(counter.seq).padStart(3, '0')}`;
-        const invoice = new Invoice({
-          invoiceId,
-          invoiceNo: invoiceId, // add invoiceNo as top-level field
-          data: { ...data, invoiceNo: invoiceId },
-          excelFilePath: req.file ? req.file.path : undefined,
+        // Extract invoice number from Excel - ONLY use "In_no" column
+        let excelInvoiceNo = "";
+        
+        // ONLY look for "In_no" field, nothing else
+        if (data["In_no"]) {
+          excelInvoiceNo = data["In_no"];
+          console.log('Backend: Found Excel "In_no":', excelInvoiceNo);
+        } else if (data["In_no "]) {
+          excelInvoiceNo = data["In_no "];
+          console.log('Backend: Found Excel "In_no " (with space):', excelInvoiceNo);
+        } else if (data["In_no  "]) {
+          excelInvoiceNo = data["In_no  "];
+          console.log('Backend: Found Excel "In_no  " (with double space):', excelInvoiceNo);
+        } else {
+          console.warn('Backend: Excel "In_no" field NOT FOUND in data. Available columns:', Object.keys(data));
+          console.log('Backend: Row data:', data);
+        }
+        
+        if (!excelInvoiceNo) {
+          console.error('Backend: No Excel "In_no" found - cannot create invoice');
+          return; // Skip this invoice if no "In_no" found
+        }
+        
+        // Create new invoice with ONLY Excel "In_no" data
+        const newInvoice = new Invoice({
+          data: { 
+            ...data, 
+            "In_no": excelInvoiceNo, // Store Excel "In_no" as the primary field
+            invoiceNo: excelInvoiceNo // Also store in invoiceNo for compatibility
+          },
+          createdAt: new Date()
         });
-        await invoice.save();
-        savedInvoices.push(invoice);
+        
+        await newInvoice.save();
+        savedInvoices.push(newInvoice);
       } catch (err) {
         console.error(`Invoice save error at index ${idx}:`, err.message);
         failedInvoices.push({ index: idx, error: err.message, data });
       }
     }
-    res.status(201).json({
+    
+    // Send response with Excel invoice numbers only
+    const responseInvoiceNumbers = savedInvoices.map(inv => inv.data?.invoiceNo || ""); // Send Excel numbers from data field
+    
+    res.json({
       success: true,
-      invoiceIds: savedInvoices.map(inv => inv.invoiceId),
-      failedInvoices
+      message: `Successfully processed ${savedInvoices.length} invoices`,
+      invoiceNumbers: responseInvoiceNumbers, // Excel numbers only
+      totalInvoices: savedInvoices.length
     });
   } catch (err) {
     console.error('Invoice upload error:', err);
@@ -72,4 +95,4 @@ router.post('/invoice-upload', upload.single('excel'), async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
