@@ -1,1 +1,4 @@
-.vercel
+﻿.vercel
+uploads/
+node_modules/
+config.env
