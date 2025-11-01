@@ -11,11 +11,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
+  'http://localhost:3000', // for local development
+  // Vercel domains - allow all Vercel preview and production domains
+  /^https:\/\/.*\.vercel\.app$/, // all Vercel preview and production domains
   'https://invoice-kqw52vp9e-aitik-officials-projects.vercel.app', // your actual Vercel domain
   'https://invoice-gen-aitik.vercel.app', // any other Vercel preview/custom domains
   'https://invoicegen-coral.vercel.app', // additional Vercel domain
   'https://invoice-gen-755r.vercel.app', // new Vercel deployment
-  'http://localhost:3000' // for local development
 ];
 
 // Middleware
@@ -24,7 +26,18 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    
+    // Check if origin matches any allowed origin (string or regex)
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
       return callback(null, true);
     } else {
       return callback(new Error('Not allowed by CORS'));
